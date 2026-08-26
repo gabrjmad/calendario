@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6f1726">
+  <title>Rione Badia — Disponibilità cucina</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bordeaux: #6f1726;
+      --bordeaux-dark: #4c0d17;
+      --bordeaux-soft: #f8eef0;
+      --ink: #272126;
+      --muted: #756b70;
+      --line: #ead7dc;
+      --card: #ffffff;
+      --bg: #fcfaf9;
+      --green: #18b968;
+      --lime: #a9bf25;
+      --yellow: #e9b51d;
+      --red: #db4646;
+      --dark-red: #98222d;
+      --gray: #a5a5a5;
+      --sidebar: min(82vw, 310px);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Montserrat, Arial, sans-serif;
+    }
+    button { font: inherit; }
+
+    .menu-toggle {
+      position: fixed;
+      z-index: 30;
+      top: 14px;
+      left: 14px;
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--bordeaux);
+      color: #fff;
+      box-shadow: 0 7px 18px rgba(76, 13, 23, .22);
+      cursor: pointer;
+    }
+    .menu-toggle span,
+    .menu-toggle::before,
+    .menu-toggle::after {
+      content: "";
+      display: block;
+      width: 22px;
+      height: 2px;
+      margin: 5px auto;
+      background: currentColor;
+      border-radius: 4px;
+    }
+
+    .scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      background: rgba(28, 8, 13, .48);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .2s ease, visibility .2s ease;
+    }
+    .sidebar {
+      position: fixed;
+      z-index: 40;
+      inset: 0 auto 0 0;
+      width: var(--sidebar);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bordeaux);
+      color: #fff;
+      box-shadow: 7px 0 24px rgba(35, 4, 10, .28);
+      transform: translateX(-104%);
+      transition: transform .25s ease;
+    }
+    body.menu-open { overflow: hidden; }
+    body.menu-open .sidebar { transform: translateX(0); }
+    body.menu-open .scrim { opacity: 1; visibility: visible; }
+
+    .sidebar-head {
+      padding: 30px 24px 22px;
+      border-bottom: 1px solid rgba(255,255,255,.2);
+      text-align: center;
+    }
+    .sidebar-logo {
+      display: block;
+      width: 154px;
+      max-width: 75%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+    }
+    .sidebar-head p { margin: 0; font-size: .78rem; font-weight: 600; letter-spacing: .11em; text-transform: uppercase; opacity: .8; }
+    .nav { padding: 16px 12px; }
+    .nav button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 15px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #fff;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .nav button:hover, .nav button.active { background: rgba(255,255,255,.16); }
+    .nav-icon { width: 22px; text-align: center; font-size: 1.12rem; }
+    .sidebar-note { margin-top: auto; padding: 18px 24px 28px; font-size: .72rem; line-height: 1.5; opacity: .72; }
+
+    main { width: min(100%, 1180px); margin: 0 auto; padding: 27px 16px 44px; }
+    .page-head { padding: 8px 0 28px; text-align: center; }
+    .title {
+      margin: 8px 0 4px;
+      color: var(--bordeaux);
+      font-family: UnifrakturCook, Georgia, serif;
+      font-size: clamp(3.2rem, 13vw, 6.2rem);
+      font-weight: 700;
+      line-height: .98;
+      text-shadow: 1px 1px 0 #2e090f, 0 4px 8px rgba(75, 13, 23, .18);
+    }
+    .subtitle { margin: 14px 0 0; color: var(--muted); font-size: .82rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .divider { width: 110px; height: 3px; margin: 17px auto 0; border-radius: 99px; background: var(--bordeaux); }
+
+    .view { display: none; }
+    .view.active { display: block; }
+    .section-title { margin: 0 0 18px; color: var(--bordeaux-dark); font-size: 1.17rem; }
+    .days-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+    .day-card {
+      position: relative;
+      min-height: 176px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--card);
+      box-shadow: 0 5px 16px rgba(70, 21, 30, .08);
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .day-card:hover { transform: translateY(-2px); box-shadow: 0 8px 21px rgba(70, 21, 30, .14); }
+    .day-card.past { opacity: .63; }
+    .day-card:focus-visible { outline: 3px solid rgba(111, 23, 38, .35); outline-offset: 3px; }
+    .card-inner { min-height: 176px; padding: 17px 34px 16px 17px; }
+    .mini-logo {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      width: 31px;
+      height: 31px;
+      object-fit: contain;
+      border-radius: 50%;
+      opacity: .88;
+    }
+    .card-head { padding-right: 37px; }
+    .card-title { margin: 0; color: var(--bordeaux-dark); font-size: 1rem; font-weight: 800; line-height: 1.25; }
+    .card-meta { margin: 5px 0 0; color: var(--muted); font-size: .74rem; font-weight: 600; }
+    .count { margin: 15px 0 5px; color: var(--bordeaux-dark); font-size: .95rem; font-weight: 800; }
+    .bar-slot { height: 8px; overflow: hidden; border-radius: 99px; background: #eee5e7; }
+    .bar-fill { width: var(--width); height: 100%; border-radius: inherit; background: var(--status); transition: width .35s ease; }
+    .closed-list { display: grid; gap: 5px; margin-top: 13px; }
+    .person-line { display: flex; align-items: center; gap: 7px; min-width: 0; color: #41383c; font-size: .76rem; font-weight: 600; }
+    .person-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--bordeaux); }
+    .person-line span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vertical-track { position: absolute; top: 13px; right: 10px; bottom: 13px; width: 8px; overflow: hidden; border-radius: 99px; background: #ece5e6; }
+    .vertical-fill { position: absolute; right: 0; bottom: 0; left: 0; height: var(--height); border-radius: 99px; background: var(--status); transition: height .35s ease; }
+
+    .card-details { display: none; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .day-card.expanded .card-details { display: block; }
+    .day-card.expanded .closed-list { display: none; }
+    .status-label { margin: 0 0 15px; color: var(--bordeaux-dark); font-size: .8rem; font-weight: 800; }
+    .details-label { margin: 0 0 9px; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .full-list { display: grid; gap: 7px; }
+    .full-person { display: flex; align-items: flex-start; gap: 8px; color: #352d31; font-size: .82rem; font-weight: 600; line-height: 1.25; }
+    .tap-note { margin: 14px 0 0; color: var(--muted); font-size: .69rem; font-weight: 600; }
+    .day-card.expanded .tap-note { display: none; }
+
+    .empty { padding: 28px 20px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); text-align: center; font-size: .88rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 4px 14px rgba(70, 21, 30, .06); }
+    table { width: 100%; min-width: 480px; border-collapse: collapse; }
+    th, td { padding: 15px 16px; border-bottom: 1px solid #f0e8ea; text-align: left; }
+    th { color: var(--bordeaux-dark); background: var(--bordeaux-soft); font-size: .76rem; letter-spacing: .05em; text-transform: uppercase; }
+    td { font-size: .85rem; font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .number { text-align: center; font-variant-numeric: tabular-nums; }
+    .summary-name { color: var(--bordeaux-dark); font-weight: 800; }
+    .summary-note { margin: 14px 1px 0; color: var(--muted); font-size: .75rem; line-height: 1.55; }
+
+    @media (min-width: 720px) {
+      .menu-toggle { left: 22px; top: 22px; }
+      main { padding: 36px 28px 55px; }
+      .days-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+      .card-inner { min-height: 196px; }
+    }
+    @media (min-width: 1040px) {
+      .sidebar { transform: translateX(0); }
+      .menu-toggle, .scrim { display: none; }
+      body { padding-left: 310px; }
+      main { padding-top: 42px; }
+      .days-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Apri menu" aria-expanded="false"><span></span></button>
+  <div class="scrim" id="scrim"></div>
+
+  <aside class="sidebar" id="sidebar" aria-label="Menu principale">
+    <div class="sidebar-head">
+      <img class="sidebar-logo" src="assets/logo-stemma.jpg" alt="Stemma Rione Badia" onerror="this.style.display='none'">
+      <p>Servizi cucina</p>
+    </div>
+    <nav class="nav">
+      <button class="active" data-view="calendar" type="button"><span class="nav-icon">▣</span>Calendario</button>
+      <button data-view="summary" type="button"><span class="nav-icon">☷</span>Riepilogo</button>
+    </nav>
+    <p class="sidebar-note">Turno unico: 07:30–11:30<br>Copertura completa: 6 persone</p>
+  </aside>
+
+  <main>
+    <header class="page-head">
+      <h1 class="title">Rione Badia</h1>
+      <p class="subtitle">Disponibilità servizi cucina</p>
+      <div class="divider"></div>
+    </header>
+
+    <section class="view active" id="calendarView">
+      <h2 class="section-title">Calendario disponibilità</h2>
+      <div class="days-grid" id="daysGrid"></div>
+    </section>
+
+    <section class="view" id="summaryView">
+      <h2 class="section-title">Riepilogo persone</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Persona</th><th class="number">Disponibile</th><th class="number">Assente</th></tr></thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+      <p class="summary-note">Le assenze sono calcolate su 15 giorni: <strong>15 − giorni disponibili</strong>. Il riepilogo usa le disponibilità inserite nei dati, anche se i giorni demo sono meno di 15.</p>
+    </section>
+  </main>
+
+  <script>
+    // ===== DATI DA MODIFICARE =====
+    // Inserisci qui le date e i nomi disponibili. Il formato data è YYYY-MM-DD.
+    // Le date possono essere in qualsiasi ordine: il sito le ordina automaticamente.
+    const TOTAL_DAYS = 15;
+    const TEAM = [
+      { id: 'gabriele', name: 'Gabriele', nickname: 'SNAI' },
+      { id: 'jasmin', name: 'Jasmin', nickname: 'IL CAPO' },
+      { id: 'fabiana', name: 'Fabiana', nickname: 'LA NOVELLA' },
+      { id: 'davide', name: 'Davide', nickname: 'IL LUMACONE' },
+      { id: 'nicola', name: 'Nicola', nickname: 'SCOPETTI' },
+      { id: 'alessandro', name: 'Alessandro', nickname: 'IL PROVOCATORE' },
+      { id: 'cristiano', name: 'Cristiano', nickname: 'PICCOLO LUCIO' },
+      { id: 'elena', name: 'Elena', nickname: 'PACINI' }
+    ];
+
+    const DAYS = [
+      { date: '2026-08-28', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'alessandro'] },
+      { date: '2026-08-29', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-08-31', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-01', available: ['gabriele', 'fabiana', 'davide', 'alessandro'] },
+      { date: '2026-09-02', available: ['jasmin', 'fabiana', 'davide'] },
+      { date: '2026-09-03', available: ['gabriele', 'jasmin'] },
+      { date: '2026-09-04', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'cristiano'] },
+      { date: '2026-09-05', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-06', available: ['gabriele', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-07', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-08', available: ['gabriele', 'jasmin', 'cristiano', 'elena'] },
+      { date: '2026-09-09', available: ['fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-10', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-11', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-12', available: ['gabriele', 'jasmin', 'fabiana', 'davide'] }
+    ];
+    // ===== FINE DATI DA MODIFICARE =====
+
+    const $ = (selector) => document.querySelector(selector);
+    const formatPerson = (person) => `${person.name} — ${person.nickname}`;
+    const parseDate = (iso) => new Date(`${iso}T12:00:00`);
+    const isPast = (iso) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return parseDate(iso) < today;
+    };
+    const dateLabel = (iso, long = false) => new Intl.DateTimeFormat('it-IT', long
+      ? { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }
+      : { day: '2-digit', month: '2-digit', year: 'numeric' }
+    ).format(parseDate(iso));
+
+    function statusFor(count) {
+      if (count >= 6) return { color: 'var(--green)', text: 'Turno completo', missing: 'Copertura completa' };
+      if (count === 5) return { color: 'var(--lime)', text: 'Quasi completo · manca 1 persona', missing: 'Quasi completo' };
+      if (count === 4) return { color: 'var(--yellow)', text: 'Copertura parziale · mancano 2 persone', missing: 'Copertura parziale' };
+      if (count === 3) return { color: 'var(--red)', text: 'Copertura insufficiente · mancano 3 persone', missing: 'Copertura insufficiente' };
+      if (count > 0) return { color: 'var(--dark-red)', text: 'Copertura critica', missing: 'Copertura critica' };
+      return { color: 'var(--gray)', text: 'Nessuna disponibilità', missing: 'Nessuna disponibilità' };
+    }
+
+    function renderCalendar() {
+      const grid = $('#daysGrid');
+      const ordered = [...DAYS].sort((a, b) => parseDate(a.date) - parseDate(b.date));
+      if (!ordered.length) {
+        grid.innerHTML = '<p class="empty">Non ci sono ancora date inserite. Modifica l’array <code>DAYS</code> nel file.</p>';
+        return;
+      }
+      grid.innerHTML = ordered.map((day) => {
+        const people = day.available.map(id => TEAM.find(person => person.id === id)).filter(Boolean);
+        const count = people.length;
+        const percent = Math.min(100, (count / 6) * 100);
+        const status = statusFor(count);
+        const pastClass = isPast(day.date) ? ' past' : '';
+        const closedPeople = people.map(person => `<div class="person-line"><i class="person-dot"></i><span>${person.name}</span></div>`).join('') || '<div class="person-line"><i class="person-dot"></i><span>Nessun disponibile</span></div>';
+        const fullPeople = people.map(person => `<div class="full-person"><i class="person-dot"></i><span>${formatPerson(person)}</span></div>`).join('') || '<div class="full-person"><i class="person-dot"></i><span>Nessun disponibile</span></div>';
+        return `
+          <article class="day-card${pastClass}" tabindex="0" role="button" aria-expanded="false" style="--status:${status.color};--width:${percent}%;--height:${percent}%">
+            <div class="vertical-track"><div class="vertical-fill"></div></div>
+            <div class="card-inner">
+              <img class="mini-logo" src="assets/logo-stemma.jpg" alt="" aria-hidden="true" onerror="this.style.display='none'">
+              <div class="card-head">
+                <h3 class="card-title">Turno cucina - ${dateLabel(day.date)}</h3>
+                <p class="card-meta">Tocca la card per i dettagli</p>
+              </div>
+              <p class="count">${count} / 6 disponibili</p>
+              <div class="bar-slot" aria-label="Copertura ${count} su 6"><div class="bar-fill"></div></div>
+              <div class="closed-list">${closedPeople}</div>
+              <div class="card-details">
+                <p class="card-title">${dateLabel(day.date, true)}</p>
+                <p class="card-meta">Turno cucina · 07:30–11:30</p>
+                <p class="status-label">${status.text}</p>
+                <p class="details-label">Disponibili</p>
+                <div class="full-list">${fullPeople}</div>
+              </div>
+              <p class="tap-note">Tocca per ${people.length ? 'vedere tutti i dettagli' : 'chiudere'}</p>
+            </div>
+          </article>`;
+      }).join('');
+
+      grid.querySelectorAll('.day-card').forEach(card => {
+        const toggle = () => {
+          const expanded = card.classList.toggle('expanded');
+          card.setAttribute('aria-expanded', expanded);
+        };
+        card.addEventListener('click', toggle);
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+        });
+      });
+    }
+
+    function renderSummary() {
+      const counts = Object.fromEntries(TEAM.map(person => [person.id, 0]));
+      DAYS.forEach(day => day.available.forEach(id => { if (id in counts) counts[id] += 1; }));
+      $('#summaryBody').innerHTML = TEAM.map(person => {
+        const available = counts[person.id];
+        const absent = Math.max(0, TOTAL_DAYS - available);
+        return `<tr><td class="summary-name">${formatPerson(person)}</td><td class="number">${available}</td><td class="number">${absent}</td></tr>`;
+      }).join('');
+    }
+
+    function setView(view) {
+      $('#calendarView').classList.toggle('active', view === 'calendar');
+      $('#summaryView').classList.toggle('active', view === 'summary');
+      document.querySelectorAll('.nav button').forEach(button => button.classList.toggle('active', button.dataset.view === view));
+      closeMenu();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    const openMenu = () => { document.body.classList.add('menu-open'); $('#menuToggle').setAttribute('aria-expanded', 'true'); };
+    const closeMenu = () => { document.body.classList.remove('menu-open'); $('#menuToggle').setAttribute('aria-expanded', 'false'); };
+    $('#menuToggle').addEventListener('click', () => document.body.classList.contains('menu-open') ? closeMenu() : openMenu());
+    $('#scrim').addEventListener('click', closeMenu);
+    document.querySelectorAll('.nav button').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
+
+    renderCalendar();
+    renderSummary();
+  </script>
+</body>
+</html>
