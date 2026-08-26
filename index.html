@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="it">
 <head>
@@ -160,7 +159,7 @@
     .day-card:hover { transform: translateY(-2px); box-shadow: 0 8px 21px rgba(70, 21, 30, .14); }
     .day-card.past { opacity: .63; }
     .day-card:focus-visible { outline: 3px solid rgba(111, 23, 38, .35); outline-offset: 3px; }
-    .card-inner { min-height: 176px; padding: 17px; }
+    .card-inner { min-height: 176px; padding: 17px 34px 16px 17px; }
     .mini-logo {
       position: absolute;
       top: 12px;
@@ -181,6 +180,8 @@
     .person-line { display: flex; align-items: center; gap: 7px; min-width: 0; color: #41383c; font-size: .76rem; font-weight: 600; }
     .person-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--bordeaux); }
     .person-line span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vertical-track { position: absolute; top: 13px; right: 10px; bottom: 13px; width: 8px; overflow: hidden; border-radius: 99px; background: #ece5e6; }
+    .vertical-fill { position: absolute; right: 0; bottom: 0; left: 0; height: var(--height); border-radius: 99px; background: var(--status); transition: height .35s ease; }
 
     .card-details { display: none; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); }
     .day-card.expanded .card-details { display: block; }
@@ -253,4 +254,143 @@
         <table>
           <thead><tr><th>Persona</th><th class="number">Disponibile</th><th class="number">Assente</th></tr></thead>
           <tbody id="summaryBody"></tbody>
-        </table
+        </table>
+      </div>
+      <p class="summary-note">Le assenze sono calcolate su 15 giorni: <strong>15 − giorni disponibili</strong>. Il riepilogo usa le disponibilità inserite nei dati, anche se i giorni demo sono meno di 15.</p>
+    </section>
+  </main>
+
+  <script>
+    // ===== DATI DA MODIFICARE =====
+    // Inserisci qui le date e i nomi disponibili. Il formato data è YYYY-MM-DD.
+    // Le date possono essere in qualsiasi ordine: il sito le ordina automaticamente.
+    const TOTAL_DAYS = 15;
+    const TEAM = [
+      { id: 'gabriele', name: 'Gabriele', nickname: 'SNAI' },
+      { id: 'jasmin', name: 'Jasmin', nickname: 'IL CAPO' },
+      { id: 'fabiana', name: 'Fabiana', nickname: 'LA NOVELLA' },
+      { id: 'davide', name: 'Davide', nickname: 'IL LUMACONE' },
+      { id: 'nicola', name: 'Nicola', nickname: 'SCOPETTI' },
+      { id: 'alessandro', name: 'Alessandro', nickname: 'IL PROVOCATORE' },
+      { id: 'cristiano', name: 'Cristiano', nickname: 'PICCOLO LUCIO' },
+      { id: 'elena', name: 'Elena', nickname: 'PACINI' }
+    ];
+
+    const DAYS = [
+      { date: '2026-08-29', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-08-31', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-01', available: ['gabriele', 'fabiana', 'davide', 'alessandro'] },
+      { date: '2026-09-02', available: ['jasmin', 'fabiana', 'davide'] },
+      { date: '2026-09-03', available: ['gabriele', 'jasmin'] },
+      { date: '2026-09-04', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'cristiano'] },
+      { date: '2026-09-05', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-06', available: ['gabriele', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-07', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-08', available: ['gabriele', 'jasmin', 'cristiano', 'elena'] },
+      { date: '2026-09-09', available: ['fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-10', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola'] },
+      { date: '2026-09-11', available: ['gabriele', 'jasmin', 'fabiana', 'davide', 'nicola', 'alessandro'] },
+      { date: '2026-09-12', available: ['gabriele', 'jasmin', 'fabiana', 'davide'] }
+    ];
+    // ===== FINE DATI DA MODIFICARE =====
+
+    const $ = (selector) => document.querySelector(selector);
+    const formatPerson = (person) => `${person.name} — ${person.nickname}`;
+    const parseDate = (iso) => new Date(`${iso}T12:00:00`);
+    const isPast = (iso) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return parseDate(iso) < today;
+    };
+    const dateLabel = (iso, long = false) => new Intl.DateTimeFormat('it-IT', long
+      ? { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }
+      : { day: '2-digit', month: '2-digit', year: 'numeric' }
+    ).format(parseDate(iso));
+
+    function statusFor(count) {
+      if (count >= 6) return { color: 'var(--green)', text: 'Turno completo', missing: 'Copertura completa' };
+      if (count === 5) return { color: 'var(--lime)', text: 'Quasi completo · manca 1 persona', missing: 'Quasi completo' };
+      if (count === 4) return { color: 'var(--yellow)', text: 'Copertura parziale · mancano 2 persone', missing: 'Copertura parziale' };
+      if (count === 3) return { color: 'var(--red)', text: 'Copertura insufficiente · mancano 3 persone', missing: 'Copertura insufficiente' };
+      if (count > 0) return { color: 'var(--dark-red)', text: 'Copertura critica', missing: 'Copertura critica' };
+      return { color: 'var(--gray)', text: 'Nessuna disponibilità', missing: 'Nessuna disponibilità' };
+    }
+
+    function renderCalendar() {
+      const grid = $('#daysGrid');
+      const ordered = [...DAYS].sort((a, b) => parseDate(a.date) - parseDate(b.date));
+      if (!ordered.length) {
+        grid.innerHTML = '<p class="empty">Non ci sono ancora date inserite. Modifica l’array <code>DAYS</code> nel file.</p>';
+        return;
+      }
+      grid.innerHTML = ordered.map((day) => {
+        const people = day.available.map(id => TEAM.find(person => person.id === id)).filter(Boolean);
+        const count = people.length;
+        const percent = Math.min(100, (count / 6) * 100);
+        const status = statusFor(count);
+        const pastClass = isPast(day.date) ? ' past' : '';
+        const closedPeople = people.map(person => `<div class="person-line"><i class="person-dot"></i><span>${person.name}</span></div>`).join('') || '<div class="person-line"><i class="person-dot"></i><span>Nessun disponibile</span></div>';
+        const fullPeople = people.map(person => `<div class="full-person"><i class="person-dot"></i><span>${formatPerson(person)}</span></div>`).join('') || '<div class="full-person"><i class="person-dot"></i><span>Nessun disponibile</span></div>';
+        return `
+          <article class="day-card${pastClass}" tabindex="0" role="button" aria-expanded="false" style="--status:${status.color};--width:${percent}%;--height:${percent}%">
+            <div class="card-inner">
+              <img class="mini-logo" src="assets/logo-stemma.jpg" alt="" aria-hidden="true" onerror="this.style.display='none'">
+              <div class="card-head">
+                <h3 class="card-title">Turno cucina - ${dateLabel(day.date)}</h3>
+                <p class="card-meta">Tocca la card per i dettagli</p>
+              </div>
+              <p class="count">${count} / 6 disponibili</p>
+              <div class="bar-slot" aria-label="Copertura ${count} su 6"><div class="bar-fill"></div></div>
+              <div class="closed-list">${closedPeople}</div>
+              <div class="card-details">
+                <p class="card-title">${dateLabel(day.date, true)}</p>
+                <p class="card-meta">Turno cucina · 07:30–11:30</p>
+                <p class="status-label">${status.text}</p>
+                <p class="details-label">Disponibili</p>
+                <div class="full-list">${fullPeople}</div>
+              </div>
+              <p class="tap-note">Tocca per ${people.length ? 'vedere tutti i dettagli' : 'chiudere'}</p>
+            </div>
+          </article>`;
+      }).join('');
+
+      grid.querySelectorAll('.day-card').forEach(card => {
+        const toggle = () => {
+          const expanded = card.classList.toggle('expanded');
+          card.setAttribute('aria-expanded', expanded);
+        };
+        card.addEventListener('click', toggle);
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+        });
+      });
+    }
+
+    function renderSummary() {
+      const counts = Object.fromEntries(TEAM.map(person => [person.id, 0]));
+      DAYS.forEach(day => day.available.forEach(id => { if (id in counts) counts[id] += 1; }));
+      $('#summaryBody').innerHTML = TEAM.map(person => {
+        const available = counts[person.id];
+        const absent = Math.max(0, TOTAL_DAYS - available);
+        return `<tr><td class="summary-name">${formatPerson(person)}</td><td class="number">${available}</td><td class="number">${absent}</td></tr>`;
+      }).join('');
+    }
+
+    function setView(view) {
+      $('#calendarView').classList.toggle('active', view === 'calendar');
+      $('#summaryView').classList.toggle('active', view === 'summary');
+      document.querySelectorAll('.nav button').forEach(button => button.classList.toggle('active', button.dataset.view === view));
+      closeMenu();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    const openMenu = () => { document.body.classList.add('menu-open'); $('#menuToggle').setAttribute('aria-expanded', 'true'); };
+    const closeMenu = () => { document.body.classList.remove('menu-open'); $('#menuToggle').setAttribute('aria-expanded', 'false'); };
+    $('#menuToggle').addEventListener('click', () => document.body.classList.contains('menu-open') ? closeMenu() : openMenu());
+    $('#scrim').addEventListener('click', closeMenu);
+    document.querySelectorAll('.nav button').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
+
+    renderCalendar();
+    renderSummary();
+  </script>
+</body>
+</html>
